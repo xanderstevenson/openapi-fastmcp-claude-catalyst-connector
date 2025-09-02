@@ -9,6 +9,9 @@ import signal
 import asyncio
 import fcntl
 import select
+import dotenv
+from dotenv import load_dotenv
+import requests
 
 class MCPServer:
     def __init__(self):
@@ -48,6 +51,8 @@ class MCPServer:
                 "inputSchema": {"type": "object", "properties": {}}
             }
         ]
+
+        self._load_config()
 
     def log(self, message):
         """Log messages to stderr with timestamp (never stdout)."""
@@ -166,6 +171,42 @@ class MCPServer:
     def handle_get_network_devices(self, message):
         """Handle get_network_devices request"""
         self.log("Handling get_network_devices")
+        # Try real Catalyst Center if credentials are present; otherwise fallback to mock
+        if self.cc_base_url and (getattr(self, 'cc_token', None) or (self.cc_username and self.cc_password)):
+            try:
+                path = self._resolve_network_devices_path()
+                using_direct_token = bool(getattr(self, 'cc_token', None))
+                self.log(f"Device fetch setup: base_url={self.cc_base_url}, path={path}, using_direct_token={using_direct_token}")
+                token = self.cc_token if using_direct_token else self._cc_get_token()
+                payload = self._cc_get(path, token)
+                # DNAC typically returns { "response": [ ... ] }
+                items = payload.get("response") if isinstance(payload, dict) else None
+                if items is None:
+                    # Some specs use a top-level list
+                    items = payload if isinstance(payload, list) else []
+                devices = []
+                for d in items:
+                    if not isinstance(d, dict):
+                        continue
+                    dev_id = d.get("id") or d.get("serialNumber") or d.get("macAddress") or d.get("instanceUuid") or "unknown"
+                    name = d.get("hostname") or d.get("managementIpAddress") or d.get("name") or dev_id
+                    status = d.get("reachabilityStatus") or d.get("collectionStatus") or d.get("deviceSupportLevel") or "unknown"
+                    devices.append({"id": dev_id, "name": name, "status": status})
+                self.log(f"Fetched {len(devices)} devices from Catalyst Center")
+                return {
+                    "jsonrpc": "2.0",
+                    "id": message.get("id"),
+                    "result": {"devices": devices}
+                }
+            except Exception as e:
+                self.log(f"Catalyst Center fetch failed, falling back to mock: {e}")
+                try:
+                    self.log(traceback.format_exc())
+                except Exception:
+                    pass
+                # fall through to mock
+        # Mock fallback
+        self.log("Using mock devices (no valid Catalyst Center response/config)")
         return {
             "jsonrpc": "2.0",
             "id": message.get("id"),
@@ -448,6 +489,71 @@ class MCPServer:
                     "message": f"Internal error: {str(e)}"
                 }
             }
+
+    def _load_config(self):
+        """Load configuration from environment/.env without affecting MCP behavior."""
+        try:
+            # Load .env from the script directory to avoid CWD issues under Claude Desktop
+            env_path = os.path.join(os.path.dirname(__file__), ".env")
+            load_dotenv(dotenv_path=env_path)
+        except Exception:
+            pass
+        # Defaults chosen to be safe (TLS verify on). Base URL defaults to sandbox if not provided.
+        self.cc_base_url = os.getenv("CATALYST_BASE_URL", "https://sandboxdnac.cisco.com").rstrip("/")
+        self.cc_username = os.getenv("CATALYST_USERNAME")
+        self.cc_password = os.getenv("CATALYST_PASSWORD")
+        # Optional direct token support
+        self.cc_token = os.getenv("CATALYST_TOKEN")
+        self.cc_verify_tls = str(os.getenv("CATALYST_VERIFY_TLS", "true")).lower() != "false"
+        try:
+            self.cc_timeout = float(os.getenv("CATALYST_TIMEOUT", "15"))
+        except Exception:
+            self.cc_timeout = 15.0
+        # Safe config log (no secrets)
+        try:
+            self.log(
+                f"Catalyst config: base_url={self.cc_base_url}, username_set={'yes' if self.cc_username else 'no'}, token_set={'yes' if self.cc_token else 'no'}, verify_tls={self.cc_verify_tls}, timeout={self.cc_timeout}s"
+            )
+        except Exception:
+            pass
+
+    def _resolve_network_devices_path(self):
+        """Resolve the network devices endpoint path (default DNAC path)."""
+        return "/dna/intent/api/v1/network-device"
+
+    def _cc_get_token(self):
+        """Obtain an X-Auth-Token from Catalyst Center using basic auth."""
+        if not (self.cc_username and self.cc_password):
+            raise RuntimeError("Catalyst Center credentials not set")
+        url = f"{self.cc_base_url}/dna/system/api/v1/auth/token"
+        self.log(f"Auth: POST {url} (verify_tls={self.cc_verify_tls}, timeout={self.cc_timeout}s)")
+        resp = requests.post(
+            url,
+            auth=(self.cc_username, self.cc_password),
+            headers={"Content-Type": "application/json"},
+            verify=self.cc_verify_tls,
+            timeout=self.cc_timeout,
+        )
+        self.log(f"Auth response: status={resp.status_code}")
+        if resp.status_code >= 400:
+            raise RuntimeError(f"Auth failed ({resp.status_code})")
+        ct = resp.headers.get("content-type", "")
+        data = resp.json() if "application/json" in ct else {}
+        token = data.get("Token") or data.get("token")
+        if not token:
+            raise RuntimeError("No token in auth response")
+        return token
+
+    def _cc_get(self, path, token):
+        """GET helper for Catalyst Center with X-Auth-Token."""
+        url = f"{self.cc_base_url}{path}"
+        self.log(f"GET {url} (verify_tls={self.cc_verify_tls}, timeout={self.cc_timeout}s)")
+        headers = {"Content-Type": "application/json", "X-Auth-Token": token}
+        resp = requests.get(url, headers=headers, verify=self.cc_verify_tls, timeout=self.cc_timeout)
+        self.log(f"GET response: status={resp.status_code}")
+        if resp.status_code >= 400:
+            raise RuntimeError(f"Request failed ({resp.status_code})")
+        return resp.json()
 
 def main():
     server = MCPServer()
