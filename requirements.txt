@@ -1,0 +1,9 @@
+fastmcp>=2.11.0
+fastapi
+uvicorn
+python-dotenv
+requests
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+httpx
