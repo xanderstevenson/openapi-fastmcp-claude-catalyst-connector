@@ -12,11 +12,13 @@ import select
 import dotenv
 from dotenv import load_dotenv
 import requests
+import urllib3
 
 class MCPServer:
     def __init__(self):
         self.VERSION = "0.1.1"
         self.should_exit = False
+        self.graceful_shutdown_deadline = None  # when set, delay exit until this time
         self.initialized = False
         self.last_activity = time.time()
         self.lock_file = None
@@ -63,7 +65,9 @@ class MCPServer:
     def setup_signal_handlers(self):
         """Set up signal handlers for graceful shutdown"""
         def handle_signal(signum, frame):
-            self.log(f"Signal {signum} received, scheduling shutdown...")
+            self.log(f"Signal {signum} received, scheduling graceful shutdown...")
+            # Give the client a brief window to detach without surfacing warnings
+            self.graceful_shutdown_deadline = time.time() + 2.0
             self.should_exit = True
             
         # Save original signal handlers
@@ -364,7 +368,7 @@ class MCPServer:
                         break
                         
                     response = self.process_message(line)
-                    if response:
+                    if response and not self.should_exit:
                         self.send_response(response)
                         # Standby instances stay alive and keep responding quickly with errors
                         # so the client transport remains open and no timeouts occur.
@@ -379,6 +383,19 @@ class MCPServer:
                 self.log(traceback.format_exc())
                 break
         
+        # If graceful shutdown requested, wait briefly to allow client to detach quietly
+        if self.graceful_shutdown_deadline:
+            remaining = self.graceful_shutdown_deadline - time.time()
+            while remaining > 0:
+                try:
+                    # Drain stdin without responding
+                    rlist, _, _ = select.select([sys.stdin], [], [], min(0.05, remaining))
+                    if rlist:
+                        _ = sys.stdin.readline()
+                    remaining = self.graceful_shutdown_deadline - time.time()
+                except Exception:
+                    break
+
         self.log("MCP server main loop ended")
 
     def process_message(self, line):
@@ -404,6 +421,17 @@ class MCPServer:
                     # Minimal change: always ignore initialize in standby to avoid client-facing errors
                     self.log("Standby received initialize; waiting for client EOF (no response)")
                     return None
+                # For discovery requests, return minimal successful responses immediately, then exit
+                if msg_id is not None and method in ("tools/list", "prompts/list", "resources/list"):
+                    if method == "tools/list":
+                        resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"tools": self.tools}}
+                    elif method == "prompts/list":
+                        resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"prompts": [{"name": "health_check", "description": "Check server health using the health_check tool", "arguments": []}]}}
+                    else:  # resources/list
+                        resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"resources": [{"uri": "mcp://catalyst-center/README", "name": "Catalyst Center MCP README", "description": "About this MCP server", "mimeType": "text/plain"}]}}
+                    self.log(f"Standby responded minimally to {method}; exiting standby")
+                    self.should_exit = True
+                    return resp
                 if msg_id is not None:
                     resp = {
                         "jsonrpc": "2.0",
@@ -417,16 +445,6 @@ class MCPServer:
                     return resp
                 # For notifications on standby, ignore without exiting so we can
                 # handle and immediately error the first discovery call, then exit.
-                return None
-            
-            # Notifications (no id) should not be responded to
-            if msg_id is None and method:
-                if method == "notifications/cancelled":
-                    # Suppress noisy cancellation logs; these are expected when the client
-                    # cleans up the losing transport during dual-launch probing.
-                    pass
-                else:
-                    self.log(f"Notification received: {method}")
                 return None
             
             if method == "initialize":
@@ -509,6 +527,12 @@ class MCPServer:
             self.cc_timeout = float(os.getenv("CATALYST_TIMEOUT", "15"))
         except Exception:
             self.cc_timeout = 15.0
+        # Suppress TLS warnings only if verification is explicitly disabled
+        try:
+            if not self.cc_verify_tls:
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        except Exception:
+            pass
         # Safe config log (no secrets)
         try:
             self.log(
