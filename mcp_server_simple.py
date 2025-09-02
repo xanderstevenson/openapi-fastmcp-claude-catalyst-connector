@@ -22,9 +22,7 @@ class MCPServer:
         # Standby behavior policy
         # Force 'immediate' to ensure losing transport does not receive discovery and
         # to avoid 5s cancellations and attach instability in Claude Desktop.
-        # Respect environment override so desktop config can suppress error bubbles
-        # when dual-launch probing occurs. Supported values: 'immediate' (default), 'hold'.
-        self.standby_policy = os.environ.get("MCP_STANDBY_POLICY", "immediate").strip().lower()
+        self.standby_policy = "immediate"
         
         # Record original signal handlers and install our handlers
         self.original_sigint = signal.getsignal(signal.SIGINT)
@@ -34,6 +32,8 @@ class MCPServer:
 
         # Enforce single instance using file lock
         self.acquire_single_instance_lock()
+        
+        # No special stdout tracking; rely on immediate exit on BrokenPipe
         
         # Define available tools
         self.tools = [
@@ -112,7 +112,7 @@ class MCPServer:
         """Send a JSON-RPC response"""
         if not response:
             return
-            
+        
         response_str = json.dumps(response)
         self.log(f"Sending: {response_str}")
         try:
@@ -360,19 +360,9 @@ class MCPServer:
             if not self.is_primary:
                 # Standby behavior depends on policy
                 if method == "initialize":
-                    if self.standby_policy == "hold":
-                        # Do not respond; keep process alive so client closes transport
-                        self.log("Standby(policy=hold) received initialize; waiting for client EOF (no response)")
-                        return None
-                    # Default policy: respond with error and exit immediately
-                    resp = {
-                        "jsonrpc": "2.0",
-                        "id": (msg_id if msg_id is not None else 0),
-                        "error": {"code": -32001, "message": "Initialize rejected: standby instance"}
-                    }
-                    self.log("Exiting standby (expected) after init reject [policy=immediate]")
-                    self.should_exit = True
-                    return resp
+                    # Minimal change: always ignore initialize in standby to avoid client-facing errors
+                    self.log("Standby received initialize; waiting for client EOF (no response)")
+                    return None
                 if msg_id is not None:
                     resp = {
                         "jsonrpc": "2.0",
