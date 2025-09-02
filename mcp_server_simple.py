@@ -22,7 +22,9 @@ class MCPServer:
         # Standby behavior policy
         # Force 'immediate' to ensure losing transport does not receive discovery and
         # to avoid 5s cancellations and attach instability in Claude Desktop.
-        self.standby_policy = "immediate"
+        # Respect environment override so desktop config can suppress error bubbles
+        # when dual-launch probing occurs. Supported values: 'immediate' (default), 'hold'.
+        self.standby_policy = os.environ.get("MCP_STANDBY_POLICY", "immediate").strip().lower()
         
         # Record original signal handlers and install our handlers
         self.original_sigint = signal.getsignal(signal.SIGINT)
