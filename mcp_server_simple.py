@@ -67,7 +67,7 @@ class MCPServer:
         def handle_signal(signum, frame):
             self.log(f"Signal {signum} received, scheduling graceful shutdown...")
             # Give the client a brief window to detach without surfacing warnings
-            self.graceful_shutdown_deadline = time.time() + 2.0
+            self.graceful_shutdown_deadline = time.time() + 8.0
             self.should_exit = True
             
         # Save original signal handlers
@@ -363,8 +363,10 @@ class MCPServer:
                 if rlist:
                     line = sys.stdin.readline()
                     if not line:
-                        # EOF from stdin: client closed the transport; exit cleanly
-                        self.log("EOF on stdin; exiting main loop")
+                        # EOF from stdin: client closed the transport; linger longer to avoid early disconnect warnings
+                        self.log("EOF on stdin; entering linger before exit")
+                        self.graceful_shutdown_deadline = time.time() + 12.0
+                        self.should_exit = True
                         break
                         
                     response = self.process_message(line)
@@ -413,38 +415,12 @@ class MCPServer:
             else:
                 self.log(f"Received: {json.dumps(message, indent=2)}")
 
-            # If this is a standby instance, emulate minimal valid responses for discovery calls
-            # so Claude's dual-probe startup succeeds without timeouts, but avoid executing tools.
+            # If this is a standby instance, ignore all requests and wait for client to close.
+            # Sending any responses on the losing transport can trigger UI disconnect notices.
             if not self.is_primary:
-                # Standby behavior depends on policy
+                # Reduce log verbosity in standby; only log the first initialize
                 if method == "initialize":
-                    # Minimal change: always ignore initialize in standby to avoid client-facing errors
                     self.log("Standby received initialize; waiting for client EOF (no response)")
-                    return None
-                # For discovery requests, return minimal successful responses immediately, then exit
-                if msg_id is not None and method in ("tools/list", "prompts/list", "resources/list"):
-                    if method == "tools/list":
-                        resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"tools": self.tools}}
-                    elif method == "prompts/list":
-                        resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"prompts": [{"name": "health_check", "description": "Check server health using the health_check tool", "arguments": []}]}}
-                    else:  # resources/list
-                        resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"resources": [{"uri": "mcp://catalyst-center/README", "name": "Catalyst Center MCP README", "description": "About this MCP server", "mimeType": "text/plain"}]}}
-                    self.log(f"Standby responded minimally to {method}; exiting standby")
-                    self.should_exit = True
-                    return resp
-                if msg_id is not None:
-                    resp = {
-                        "jsonrpc": "2.0",
-                        "id": msg_id,
-                        "error": {"code": -32601, "message": f"Method not handled in standby: {method}"}
-                    }
-                    # After sending this response, exit to avoid dual-transport races
-                    # Cosmetic: make intentional standby exit obvious in logs
-                    self.log(f"Exiting standby (expected) after handling method on standby: {method}")
-                    self.should_exit = True
-                    return resp
-                # For notifications on standby, ignore without exiting so we can
-                # handle and immediately error the first discovery call, then exit.
                 return None
             
             if method == "initialize":
