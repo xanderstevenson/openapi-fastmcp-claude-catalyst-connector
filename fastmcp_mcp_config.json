@@ -1,0 +1,22 @@
+{
+  "Catalyst-Center-FastMCP": {
+    "command": "python",
+    "args": [
+      "fastmcp_openapi_server.py"
+    ],
+    "env": {
+      "CATALYST_CENTER_URL": "${CATALYST_CENTER_URL}",
+      "CATALYST_CENTER_USERNAME": "${CATALYST_CENTER_USERNAME}",
+      "CATALYST_CENTER_PASSWORD": "${CATALYST_CENTER_PASSWORD}",
+      "CATALYST_TOKEN": "${CATALYST_TOKEN}",
+      "CATALYST_VERIFY_TLS": "${CATALYST_VERIFY_TLS}",
+      "CATALYST_TIMEOUT": "${CATALYST_TIMEOUT}",
+      "FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER": "true",
+      "PYTHONUNBUFFERED": "1",
+      "FASTMCP_HTTP_TIMEOUT": "60",
+      "FASTMCP_WS_TIMEOUT": "300"
+    },
+    "timeout": 300,
+    "retries": 3
+  }
+}
