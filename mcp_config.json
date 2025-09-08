@@ -10,13 +10,7 @@
         "PYTHONIOENCODING": "utf-8",
         "MCP_STANDBY_POLICY": "hold"
       },
-      "working_directory": "/Users/alexstev/code/openapi-fastmcp-claude-catalyst-connector",
-      "pass_environment": [
-        "CATALYST_BASE_URL",
-        "CATALYST_USERNAME",
-        "CATALYST_PASSWORD",
-        "CATALYST_VERIFY_TLS"
-      ]
+      "working_directory": "/Users/alexstev/code/openapi-fastmcp-claude-catalyst-connector"
     }
   }
 }

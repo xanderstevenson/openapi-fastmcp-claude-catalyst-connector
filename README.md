@@ -4,58 +4,161 @@ A Model Control Plane (MCP) server that enables Claude Desktop to interact with 
 
 ## 🚀 Features
 
-- Get network device information from Catalyst Center
-- Secure authentication
-- Easy Claude Desktop integration
-- Lightweight and fast
+- Generate FastMCP server code from OpenAPI specifications
+- Automatic endpoint generation with proper type hints
+- Retrieve network device information from Catalyst Center
+- Monitor network health and client statistics
+- Access site topology and device details
+- Secure authentication with environment variables
+- Easy integration with Claude Desktop
 
 ## 📋 Prerequisites
 
 - Python 3.8 or higher
 - Claude Desktop installed
 - Access to a Cisco Catalyst Center instance
+- Basic knowledge of Cisco networking concepts
 
-## 🛠️ Setup
+## 🛠️ Setup Instructions
 
-1. **Clone this repository**
+### 1. Clone the Repository
 
-   ```bash
-   git clone <repository-url>
-   cd openapi-fastmcp-claude-catalyst-connector
-   ```
+```bash
+git clone https://github.com/yourusername/openapi-fastmcp-claude-catalyst-connector.git
+cd openapi-fastmcp-claude-catalyst-connector
+```
 
-2. **Create and activate a virtual environment (recommended)**
+### 2. Set Up Virtual Environment
 
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```bash
+# Create a virtual environment
+python -m venv venv
 
-3. **Install dependencies**
+# Activate the virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+```
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 3. Install Dependencies
 
-4. **Configure environment variables**
+```bash
+pip install -r requirements.txt
+```
 
-   Create a `.env` file in the project root with your Catalyst Center credentials:
 
-   ```env
-   CATALYST_BASE_URL=https://your-catalyst-center-url
-   CATALYST_USERNAME=your-username
-   CATALYST_PASSWORD=your-password
-   CATALYST_VERIFY_TLS=false  # Set to true in production with valid certificates
-   CATALYST_TIMEOUT=10
-   ```
 
-## Installing in Claude Desktop
+Look at OpenAPI docs
+In this case versio 2.3.7.9 from DevNet
+https://developer.cisco.com/docs/dna-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview/
+
+
+Download the OpenAPI docs from the Catalyst Center we will be working with
+In this case, Catalyst Center Always-On v2.3.3.6
+Side menu -> Platform -> Developer Toolkit > Swagger docs
+
+
+
+### 4. Generate FastMCP Server from OpenAPI
+
+If you have an OpenAPI specification file (JSON or YAML), you can generate a FastMCP server with all endpoints automatically:
+
+```bash
+# Generate FastMCP server from OpenAPI spec
+python generate_from_openapi.py cisco-dna-center-apis.json -o catalyst_center_mcp.py
+
+# Make the generated file executable (Linux/macOS)
+chmod +x catalyst_center_mcp.py
+```
+
+This will create a FastMCP server with all the endpoints defined in your OpenAPI specification.
+
+### 5. Configure Environment Variables
+
+Create a `.env` file in the project root with your Catalyst Center credentials:
+
+```env
+# Required
+CATALYST_BASE_URL=https://your-catalyst-center-address
+CATALYST_USERNAME=your-username
+CATALYST_PASSWORD=your-password
+
+# Optional (defaults shown)
+CATALYST_VERIFY_TLS=false  # Set to true in production with valid certificates
+CATALYST_TIMEOUT=30        # API request timeout in seconds
+```
+
+### 6. Configure Claude Desktop
 
 1. Open Claude Desktop
 2. Go to Settings > Model Control Planes
 3. Click "Add MCP Server"
-4. Select the `fastmcp_mcp_config_fixed.json` file from this repository
-5. Restart Claude Desktop
+4. Select the `claude_mcp_config.json` file from this repository
+5. Restart Claude Desktop to apply changes
+
+## 🚀 Available Tools
+
+Once configured, you can use these tools in Claude Desktop:
+
+- `@Get_Network_Devices` - List all network devices
+- `@Get_Network_Health` - Check overall network health
+- `@Get_Client_Health` - View client health statistics
+- `@Get_Site_Topology` - View site topology
+- `@Get_Device_Details device_id=DEVICE_ID` - Get details for a specific device
+- `@Get_Device_Interfaces device_id=DEVICE_ID` - Get interfaces for a specific device
+
+## 🔍 Example Usage
+
+```bash
+@Get_Network_Devices
+```
+
+```bash
+@Get_Device_Details device_id=7c1b9833-1be7-43f4-b327-4663c816c4cc
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### Authentication Errors
+
+- Verify your credentials in the `.env` file
+- Ensure your account has the necessary permissions in Catalyst Center
+
+#### Connection Issues
+
+- Verify network connectivity to the Catalyst Center
+- Check if a firewall is blocking the connection
+
+#### Environment Variables Not Loading
+
+- Ensure the `.env` file is in the project root
+- Check for typos in variable names
+- Restart Claude Desktop after making changes
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Cisco DevNet](https://developer.cisco.com/) for the Catalyst Center API documentation
+- [FastMCP](https://gofastmcp.com/) for the MCP server framework
+
+## 🔄 Updating from OpenAPI
+
+When the Catalyst Center API changes, you can easily update your MCP server:
+
+1. Download the latest OpenAPI spec from your Catalyst Center instance
+2. Regenerate the MCP server code:
+
+   ```bash
+   python generate_from_openapi.py path/to/updated-spec.json -o catalyst_center_mcp.py --force
+   ```
+
+3. Restart your MCP server
 
 ## 🛠️ Available Tools
 
@@ -65,9 +168,10 @@ A Model Control Plane (MCP) server that enables Claude Desktop to interact with 
 
 Once installed, you can use the MCP in Claude Desktop by mentioning the tool name in your conversation, for example:
 
-```
+```bash
 @Get Network Devices
 ```
+
 
 ## 🔍 Troubleshooting
 
