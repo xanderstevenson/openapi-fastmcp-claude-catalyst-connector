@@ -12,6 +12,14 @@ __pycache__/
 venv/
 .python-version
 
+# MCP specific
+*.swp
+*~
+
+# IDE specific
+.vscode/
+.idea/
+
 # macOS
 .DS_Store
 .AppleDouble

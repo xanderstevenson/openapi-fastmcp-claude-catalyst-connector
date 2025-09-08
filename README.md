@@ -1,89 +1,105 @@
-# Cisco Catalyst Center MCP Server with FastMCP
+# Cisco Catalyst Center MCP for Claude Desktop
 
-A Model Context Protocol (MCP) server for Cisco Catalyst Center (formerly DNA Center) using FastMCP. Enables Claude AI to interact with your network through a structured API.
+A Model Control Plane (MCP) server that enables Claude Desktop to interact with Cisco Catalyst Center (formerly DNA Center) through its API.
 
 ## 🚀 Features
 
-- Auto-generated from Catalyst Center OpenAPI spec
-- Full API coverage through FastMCP
+- Get network device information from Catalyst Center
 - Secure authentication
-- Claude Desktop integration
+- Easy Claude Desktop integration
+- Lightweight and fast
 
 ## 📋 Prerequisites
 
-- Python 3.8+
-- Cisco Catalyst Center access
-- Valid API credentials
+- Python 3.8 or higher
+- Claude Desktop installed
+- Access to a Cisco Catalyst Center instance
 
 ## 🛠️ Setup
 
-1. **Clone the repository**
+1. **Clone this repository**
 
    ```bash
    git clone <repository-url>
-   cd openapi-to-fastmcp
+   cd openapi-fastmcp-claude-catalyst-connector
    ```
 
-2. **Set up environment**
+2. **Create and activate a virtual environment (recommended)**
 
    ```bash
    python -m venv venv
-   source venv/bin/activate  # Windows: venv\Scripts\activate
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+
+   ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure**
+4. **Configure environment variables**
 
-   ```bash
-   cp .env.example .env
-   # Edit .env with your credentials
+   Create a `.env` file in the project root with your Catalyst Center credentials:
+
+   ```env
+   CATALYST_BASE_URL=https://your-catalyst-center-url
+   CATALYST_USERNAME=your-username
+   CATALYST_PASSWORD=your-password
+   CATALYST_VERIFY_TLS=false  # Set to true in production with valid certificates
+   CATALYST_TIMEOUT=10
    ```
 
-## 🚀 Quick Start
+## Installing in Claude Desktop
 
-1. **Test connection**
-   ```bash
-   python test_connection.py
-   ```
+1. Open Claude Desktop
+2. Go to Settings > Model Control Planes
+3. Click "Add MCP Server"
+4. Select the `fastmcp_mcp_config_fixed.json` file from this repository
+5. Restart Claude Desktop
 
-2. **Generate MCP server**
-   ```bash
-   python generate_mcp_simple.py
-   ```
+## 🛠️ Available Tools
 
-3. **Start server**
-   ```bash
-   uvicorn catalyst_center_mcp_server:app --reload
-   ```
+- **Get Network Devices**: Retrieves a list of all network devices managed by Catalyst Center
 
-4. **Connect Claude Desktop**
-   - Import `claude_mcp_config.json`
-   - Toggle the server on
+## 💻 Usage
 
-## 🔒 Authentication System
+Once installed, you can use the MCP in Claude Desktop by mentioning the tool name in your conversation, for example:
 
-This project implements a secure Model Context Protocol (MCP) server for Cisco Catalyst Center (formerly DNA Center) with multiple layers of authentication and fine-grained access control.
-
-### Features
-
-- 🔒 **Three-Layer Security**:
-  - API key authentication for MCP server access
-  - User authentication with username/password
-  - Role-based access control for individual tools
-- 🛠️ Tool access control with configurable permissions
-- 🔄 Session management for authenticated users
-- 🚀 Easy integration with Claude Desktop
-
-### Configuration
-
-Edit the `.env` file to configure the following sections:
-
-#### MCP Server Configuration
 ```
-PORT=8000
-HOST=0.0.0.0
-DEBUG=True
+@Get Network Devices
 ```
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+- **Connection Issues**:
+  - Verify your `.env` file contains the correct credentials and URL
+  - Ensure your Catalyst Center instance is accessible from your machine
+  - Check if your firewall allows outgoing connections to the Catalyst Center
+
+- **MCP Server Not Loading**:
+  - Ensure the MCP server is running
+  - Verify the configuration file path in Claude Desktop is correct
+  - Check that all required environment variables are set in your `.env` file
+
+- **Authentication Failures**:
+  - Double-check your Catalyst Center credentials
+  - Verify your account has the necessary permissions
+  - Check if your account is locked out due to too many failed attempts
+
+### Checking Logs
+
+For detailed error information, check the Claude Desktop logs:
+- On macOS: `~/Library/Logs/Claude/`
+- On Windows: `%APPDATA%\Claude\logs\`
+- On Linux: `~/.config/Claude/logs/`
+
+## 🔒 Security Note
+
+- Never commit your `.env` file to version control
+- Use environment variables or a secure secret management system for production use
+- Consider using API tokens or service accounts instead of username/password when possible
 
 #### Authentication
 ```
