@@ -163,38 +163,38 @@ async def build_mcp():
             logger.error(f"Error in Get_Network_Health: {str(e)}")
             raise ValueError(f"Failed to get network health: {str(e)}")
     
-    @mcp.tool(
-        name="Get_Client_Health",
-        description="Get client health statistics",
-        output_schema={"type": "object"}
-    )
-    async def get_client_health():
-        """Get client health statistics."""
-        try:
-            async with CatalystCenterClient() as client:
-                response = await client.make_request("GET", "/dna/intent/api/v1/client-health")
-                logger.info("Successfully retrieved client health statistics")
-                return response
-        except Exception as e:
-            logger.error(f"Error in Get_Client_Health: {str(e)}")
-            raise ValueError(f"Failed to get client health: {str(e)}")
+    # @mcp.tool(
+    #     name="Get_Client_Health",
+    #     description="Get client health statistics",
+    #     output_schema={"type": "object"}
+    # )
+    # async def get_client_health():
+    #     """Get client health statistics."""
+    #     try:
+    #         async with CatalystCenterClient() as client:
+    #             response = await client.make_request("GET", "/dna/intent/api/v1/client-health")
+    #             logger.info("Successfully retrieved client health statistics")
+    #             return response
+    #     except Exception as e:
+    #         logger.error(f"Error in Get_Client_Health: {str(e)}")
+    #         raise ValueError(f"Failed to get client health: {str(e)}")
     
-    @mcp.tool(
-        name="Get_Site_Topology",
-        description="Get the site topology information",
-        output_schema={"type": "object"}
-    )
-    async def get_site_topology():
-        """Get the site topology information."""
-        try:
-            async with CatalystCenterClient() as client:
-                response = await client.make_request("GET", "/dna/intent/api/v1/topology/site-topology")
-                sites = response.get('response', {}).get('sites', [])
-                logger.info(f"Found {len(sites)} sites in topology")
-                return response
-        except Exception as e:
-            logger.error(f"Error in Get_Site_Topology: {str(e)}")
-            raise ValueError(f"Failed to get site topology: {str(e)}")
+    # @mcp.tool(
+    #     name="Get_Site_Topology",
+    #     description="Get the site topology information",
+    #     output_schema={"type": "object"}
+    # )
+    # async def get_site_topology():
+    #     """Get the site topology information."""
+    #     try:
+    #         async with CatalystCenterClient() as client:
+    #             response = await client.make_request("GET", "/dna/intent/api/v1/topology/site-topology")
+    #             sites = response.get('response', {}).get('sites', [])
+    #             logger.info(f"Found {len(sites)} sites in topology")
+    #             return response
+    #     except Exception as e:
+    #         logger.error(f"Error in Get_Site_Topology: {str(e)}")
+    #         raise ValueError(f"Failed to get site topology: {str(e)}")
     
     @mcp.tool(
         name="Get_Device_Interfaces",
