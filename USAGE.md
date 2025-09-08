@@ -2,6 +2,19 @@
 
 ## Quick Start
 
+
+
+Look at OpenAPI docs
+In this case versio 2.3.7.9 from DevNet
+https://developer.cisco.com/docs/dna-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview/
+
+
+Download the OpenAPI docs from the Catalyst Center we will be working with
+In this case, Catalyst Center Always-On v2.3.3.6
+Side menu -> Platform -> Developer Toolkit > Swagger docs
+
+
+
 1. **Start the MCP Server**
    ```bash
    # Install dependencies

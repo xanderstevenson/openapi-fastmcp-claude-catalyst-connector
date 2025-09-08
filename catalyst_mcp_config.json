@@ -1,21 +1,16 @@
 {
-  "Catalyst-Center-MCP-Server": {
-    "command": "uv",
-    "env": {
-      "CATALYST_CENTER_URL": "${CATALYST_CENTER_URL}",
-      "CATALYST_CENTER_USERNAME": "${CATALYST_CENTER_USERNAME}",
-      "CATALYST_CENTER_PASSWORD": "${CATALYST_CENTER_PASSWORD}",
-      "MCP_SERVER_API_KEY": "${MCP_SERVER_API_KEY}",
-      "HOST": "0.0.0.0",
-      "PORT": "8000",
-      "DEBUG": "True"
-    },
-    "args": [
-      "--directory",
-      "/Users/alexstev/code/openapi-to-fastmcp",
-      "run",
-      "python",
-      "generate_mcp.py"
-    ]
+  "mcpServers": {
+    "catalyst-center": {
+      "command": "/Users/alexstev/code/openapi-fastmcp-claude-catalyst-connector/venv/bin/python3",
+      "args": [
+        "/Users/alexstev/code/openapi-fastmcp-claude-catalyst-connector/mcp_server_simple.py"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8",
+        "MCP_STANDBY_POLICY": "hold"
+      },
+      "working_directory": "/Users/alexstev/code/openapi-fastmcp-claude-catalyst-connector"
+    }
   }
 }
