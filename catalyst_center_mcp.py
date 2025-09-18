@@ -1,8 +1,32 @@
 #!/usr/bin/env python3
 """
-Cisco Catalyst Center MCP Server
+Cisco Catalyst Center MCP Server for Claude Desktop
 
-A lightweight MCP server that exposes read-only Catalyst Center API functionality.
+A Model Control Plane (MCP) server that enables Claude Desktop to interact with
+Cisco Catalyst Center (formerly DNA Center) through its REST API.
+
+🔧 Available Tools:
+1. @Get_Network_Devices - List all network devices with status and details
+2. @Get_Network_Health - View overall network health metrics and scores
+3. @Get_Device_Interfaces - Get interface details for a specific device
+4. @Get_Device_Details - Get comprehensive information about a specific device
+
+Usage Examples:
+- "Show me all network devices with high CPU usage"
+- "What's the current health score of our network?"
+- "List all interfaces on device with ID xyz"
+- "Show me details for device ABC-123"
+
+Security Note:
+- All API calls are authenticated using environment variables
+- No sensitive data is logged or exposed in responses
+- TLS verification can be enabled via configuration
+
+Pro Tips:
+- Use @Get_Network_Devices first to find device IDs
+- Check network health before diving into device details
+- For interface issues, use @Get_Device_Interfaces with the device ID
+- All tools are read-only - no configuration changes can be made
 """
 import asyncio
 import os
@@ -132,7 +156,21 @@ async def build_mcp():
     
     @mcp.tool(
         name="Get_Network_Devices",
-        description="Get a list of all network devices managed by Catalyst Center",
+        description="""Retrieve a comprehensive list of all network devices managed by Catalyst Center.
+        
+        This tool provides detailed information about each network device including:
+        - Device hostname and IP address
+        - Device type and model
+        - Software version
+        - Reachability status
+        - Uptime and last updated timestamp
+        
+        Example usage in Claude Desktop:
+        @Get_Network_Devices
+        
+        Note: For large networks, consider filtering the results by device type
+        or location if you need specific information.
+        """,
         output_schema={"type": "object"}
     )
     async def get_network_devices():
@@ -148,7 +186,21 @@ async def build_mcp():
     
     @mcp.tool(
         name="Get_Network_Health",
-        description="Get the overall network health status",
+        description="""Retrieve the overall health status of the network.
+        
+        This tool provides a comprehensive view of the network's health, including:
+        - Overall health score (0-100)
+        - Health scores by category (wired, wireless, etc.)
+        - Number of healthy, warning, and critical devices
+        - Trend information and historical comparison
+        
+        Example usage in Claude Desktop:
+        @Get_Network_Health
+        
+        Note: The health score is calculated based on various factors including
+        device status, interface errors, and performance metrics. A score below 70
+        indicates potential issues that may require attention.
+        """,
         output_schema={"type": "object"}
     )
     async def get_network_health():
@@ -163,42 +215,29 @@ async def build_mcp():
             logger.error(f"Error in Get_Network_Health: {str(e)}")
             raise ValueError(f"Failed to get network health: {str(e)}")
     
-    # @mcp.tool(
-    #     name="Get_Client_Health",
-    #     description="Get client health statistics",
-    #     output_schema={"type": "object"}
-    # )
-    # async def get_client_health():
-    #     """Get client health statistics."""
-    #     try:
-    #         async with CatalystCenterClient() as client:
-    #             response = await client.make_request("GET", "/dna/intent/api/v1/client-health")
-    #             logger.info("Successfully retrieved client health statistics")
-    #             return response
-    #     except Exception as e:
-    #         logger.error(f"Error in Get_Client_Health: {str(e)}")
-    #         raise ValueError(f"Failed to get client health: {str(e)}")
-    
-    # @mcp.tool(
-    #     name="Get_Site_Topology",
-    #     description="Get the site topology information",
-    #     output_schema={"type": "object"}
-    # )
-    # async def get_site_topology():
-    #     """Get the site topology information."""
-    #     try:
-    #         async with CatalystCenterClient() as client:
-    #             response = await client.make_request("GET", "/dna/intent/api/v1/topology/site-topology")
-    #             sites = response.get('response', {}).get('sites', [])
-    #             logger.info(f"Found {len(sites)} sites in topology")
-    #             return response
-    #     except Exception as e:
-    #         logger.error(f"Error in Get_Site_Topology: {str(e)}")
-    #         raise ValueError(f"Failed to get site topology: {str(e)}")
-    
     @mcp.tool(
         name="Get_Device_Interfaces",
-        description="Get interfaces for a specific device",
+        description="""Retrieve detailed interface information for a specific network device.
+        
+        This tool provides comprehensive interface details including:
+        - Interface names and descriptions
+        - Operational and administrative status
+        - Speed and duplex settings
+        - IP addresses and subnet masks
+        - VLAN assignments
+        - Traffic statistics (input/output rates, errors, discards)
+        
+        Parameters:
+            device_id (str): The unique identifier of the target network device.
+                           Can be obtained using @Get_Network_Devices.
+                           
+        Example usage in Claude Desktop:
+        @Get_Device_Interfaces device_id="7c1b9833-1be7-43f4-b327-4663c816c4cc"
+        
+        Note: This tool is particularly useful for troubleshooting connectivity
+        issues or verifying interface configurations. For high-density devices,
+        the response may be large.
+        """,
         output_schema={"type": "object"}
     )
     async def get_device_interfaces(device_id: str):
@@ -225,7 +264,27 @@ async def build_mcp():
     
     @mcp.tool(
         name="Get_Device_Details",
-        description="Get detailed information about a specific device",
+        description="""Retrieve comprehensive details about a specific network device.
+        
+        This tool provides extensive device information including:
+        - Hardware and software inventory
+        - Management IP and hostname
+        - Platform and OS details
+        - Uptime and last updated timestamp
+        - Serial number and MAC address
+        - Role and capabilities
+        - Management state and reachability
+        
+        Parameters:
+            device_id (str): The unique identifier of the target network device.
+                           Can be obtained using @Get_Network_Devices.
+                           
+        Example usage in Claude Desktop:
+        @Get_Device_Details device_id="7c1b9833-1be7-43f4-b327-4663c816c4cc"
+        
+        Note: Use this tool when you need complete device information.
+        For interface details, use @Get_Device_Interfaces instead.
+        """,
         output_schema={"type": "object"}
     )
     async def get_device_details(device_id: str):
